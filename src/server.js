@@ -1,27 +1,55 @@
 import express from "express";
-import bodyParser from "body-parser";
-import initApiRoutes from "./route/authRoutes"; // Đổi tên cho đúng bản chất API
-import connectDB from "./config/configdb";
-import cors from "cors"; // Nên thêm cái này để gọi API từ bên ngoài không bị lỗi
-require('dotenv').config();
+import cors from "cors";
+import dotenv from "dotenv";
 
-let app = express();
+// Internal imports
+import connectDB from "./config/configdb.js";
+import authRoutes from "./route/authRoutes.js";
 
-// 1. Cấu hình Middleware
-app.use(cors({ origin: true })); // Cho phép các ứng dụng khác gọi API
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Load environment variables
+dotenv.config();
 
-// 2. Kết nối CSDL MongoDB Atlas
+const app = express();
+
+// =========================
+// Middleware
+// =========================
+
+app.use(cors({ origin: true }));
+
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
+
+// =========================
+// Database Connection
+// =========================
+
 connectDB();
 
-// 3. Khởi tạo Routes (Đã bỏ viewEngine vì mình làm API)
-initApiRoutes(app);
+// =========================
+// Routes
+// =========================
 
-let port = process.env.PORT || 8080;
+// Auth APIs
+app.use("/api/auth", authRoutes);
 
-app.listen(port, () => {
+// Health check route
+app.get("/", (req, res) => {
+    res.send("SMM Project API is working!");
+});
+
+// =========================
+// Start Server
+// =========================
+
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
+
     console.log("--------------------------------------------------");
-    console.log(`>>> SMM Project API is running on port: ${port}`);
+
+    console.log(`>>> SMM Project API is running on port: ${PORT}`);
+
     console.log("--------------------------------------------------");
 });
