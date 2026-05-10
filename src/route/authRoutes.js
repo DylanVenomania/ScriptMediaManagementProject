@@ -1,11 +1,45 @@
-import express from 'express';
-import { registerLimiter } from '../middlewares/rateLimit.js'; // Bắt buộc có .js
-import { validateRegister } from '../middlewares/validation.js';
-import * as authController from '../controller/authController.js';
+import express from 'express'
 
-const router = express.Router();
+import { registerLimiter } from '../middlewares/rateLimit.js'
 
-// Route Đăng ký áp dụng Rate Limit (Lớp bảo mật 2)
-router.post('/register', registerLimiter, validateRegister, authController.register);
-router.post('/verify-otp', authController.verifyOTP);
-export default router;
+import { validateRegister } from '../middlewares/validation.js'
+
+import * as authController from '../controller/authController.js'
+
+import userController from '../controller/userController.js'
+
+const router = express.Router()
+
+// Register
+router.post(
+    '/register',
+    registerLimiter,
+    validateRegister,
+    authController.register
+)
+
+// Verify OTP
+router.post(
+    '/verify-otp',
+    authController.verifyOTP
+)
+
+// Forgot password
+router.post(
+    '/forgot-password',
+    userController.handleForgotPassword
+)
+
+// Reset password
+router.post(
+    '/reset-password',
+    userController.handleResetPassword
+)
+
+// Edit profile
+router.put(
+    '/edit-profile',
+    userController.handleEditProfile
+)
+
+export default router
