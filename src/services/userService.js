@@ -1,23 +1,20 @@
-const db = require('../models/index');
-const bcrypt = require('bcryptjs');
-const transporter = require('../config/mailer');
+import User from '../models/User.js'; // Nhớ thêm đuôi .js nếu Node.js yêu cầu
+import bcrypt from 'bcryptjs';
+import transporter from '../config/mailer.js';
+
 const salt = bcrypt.genSaltSync(10);
 
-// 1. Hàm yêu cầu gửi OTP
-let sendOTPtoEmail = async (email) => {
+const sendOTPtoEmail = async (email) => {
     try {
-        let user = await db.User.findOne({ email: email });
-        if (!user) return { errCode: 1, message: 'Email không tồn tại trong hệ thống!' };
+        let user = await User.findOne({ email: email });
+        if (!user) return { errCode: 1, message: 'Email không tồn tại!' };
 
-        // Tạo mã OTP 6 số
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         
-        // Lưu mã vào DB và đặt hạn dùng 5 phút
         user.otpCode = otp;
         user.otpExpires = Date.now() + 300000; 
         await user.save();
 
-        // Gửi mail thực tế
         await transporter.sendMail({
             from: '"SMM Project Support" <no-reply@smm.com>',
             to: email,
@@ -25,54 +22,48 @@ let sendOTPtoEmail = async (email) => {
             html: `<h3>Mã OTP của bạn là: <b>${otp}</b></h3><p>Mã này có hiệu lực trong 5 phút.</p>`
         });
 
-        return { errCode: 0, message: 'Mã OTP đã được gửi về email của bạn!' };
+        return { errCode: 0, message: 'Mã OTP đã được gửi!' };
     } catch (e) {
         console.log(e);
-        return { errCode: -1, message: 'Lỗi server khi gửi mail!' };
+        return { errCode: -1, message: 'Lỗi server gửi mail!' };
     }
 }
 
-// 2. Hàm xác thực OTP và đổi mật khẩu mới
-let resetPassword = async (data) => {
+const resetPassword = async (data) => {
     try {
-        let user = await db.User.findOne({ 
+        let user = await User.findOne({ 
             email: data.email, 
             otpCode: data.otp,
-            otpExpires: { $gt: Date.now() } // Kiểm tra mã còn hạn không
+            otpExpires: { $gt: Date.now() }
         });
 
-        if (!user) return { errCode: 2, message: 'Mã OTP không chính xác hoặc đã hết hạn!' };
+        if (!user) return { errCode: 2, message: 'OTP sai hoặc hết hạn!' };
 
-        // Hash mật khẩu mới và dọn dẹp OTP
         user.password = await bcrypt.hashSync(data.newPassword, salt);
         user.otpCode = null;
         user.otpExpires = null;
         await user.save();
 
-        return { errCode: 0, message: 'Khôi phục mật khẩu thành công!' };
+        return { errCode: 0, message: 'Đổi mật khẩu thành công!' };
     } catch (e) {
         return { errCode: -1, message: 'Lỗi server!' };
     }
 }
 
-let handleUpdateProfile = (data) => {
+const handleUpdateProfile = (data) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!data.email) {
-                return resolve({ errCode: 1, message: 'Thiếu email người dùng!' });
-            }
+            if (!data.email) return resolve({ errCode: 1, message: 'Thiếu email!' });
 
-            let user = await db.User.findOne({ email: data.email });
+            let user = await User.findOne({ email: data.email });
             if (user) {
-                // Chỉ cập nhật những trường được phép sửa
                 user.fullName = data.fullName;
                 user.address = data.address;
-                user.avatar = data.avatar; // Link ảnh 
-
+                user.avatar = data.avatar; 
                 await user.save();
-                resolve({ errCode: 0, message: 'Cập nhật hồ sơ thành công!' });
+                resolve({ errCode: 0, message: 'Cập nhật thành công!' });
             } else {
-                resolve({ errCode: 2, message: 'Người dùng không tồn tại!' });
+                resolve({ errCode: 2, message: 'Không tìm thấy User!' });
             }
         } catch (e) {
             reject(e);
@@ -80,8 +71,8 @@ let handleUpdateProfile = (data) => {
     });
 };
 
-module.exports = {
+export default {
     sendOTPtoEmail,
     resetPassword,
     handleUpdateProfile
-}
+};

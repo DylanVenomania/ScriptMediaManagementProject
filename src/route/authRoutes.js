@@ -1,15 +1,14 @@
 import express from 'express';
-import userController from '../controller/userController';
+import userController from '../controller/userController.js';
 
-let router = express.Router();
+const router = express.Router();
 
-let initApiRoutes = (app) => {
-	
-	router.post('/api/forgot-password', userController.handleForgotPassword);
-	router.post('/api/reset-password', userController.handleResetPassword);
+const initApiRoutes = (app) => {
+    router.post('/api/forgot-password', userController.handleForgotPassword);
+    router.post('/api/reset-password', userController.handleResetPassword);
     router.put('/api/edit-profile', userController.handleEditProfile);
 
-	return app.use('/', router);
+    return app.use('/', router);
 }
 
-module.exports = initApiRoutes;
+export default initApiRoutes;
