@@ -1,6 +1,6 @@
 import express from 'express';
-import userController from '../controller/userController.js';
 import * as authController from '../controller/authController.js';
+import * as userController from '../controller/userController.js';
 import { login } from '../controller/authController.js';
 import { registerLimiter } from '../middlewares/rateLimit.js';
 import { validateRegister } from '../middlewares/validation.js';
@@ -11,26 +11,25 @@ import { body } from 'express-validator';
 
 const router = express.Router();
 
-const initApiRoutes = (app) => {
-    // Register & Login
-    router.post('/register', registerLimiter, validateRegister, authController.register);
-    router.post('/verify-otp', authController.verifyOTP);
-    router.post('/login', loginLimiter, body('email').isEmail(), body('password').isLength({ min: 6 }), login);
+// Register & Login
+router.post('/register', registerLimiter, validateRegister, authController.register);
+router.post('/verify-otp', authController.verifyOTP);
+console.log("login =", login);
+console.log("loginLimiter =", loginLimiter);
+router.post('/login', loginLimiter, body('email').isEmail(), body('password').isLength({ min: 6 }), login);
 
-    // Profile bảo mật (cần login)
-    router.get('/user/profile', authMiddleware, authorizeRole('user'), (req, res) => {
-        res.json({ message: 'Welcome user', user: req.user });
-    });
-    router.get('/admin/profile', authMiddleware, authorizeRole('admin'), (req, res) => {
-        res.json({ message: 'Welcome admin', user: req.user });
-    });
+// Profile
+router.get('/user/profile', authMiddleware, authorizeRole('user'), (req, res) => {
+    res.json({ message: 'Welcome user', user: req.user });
+});
 
-    router.post('/forgot-password', userController.handleForgotPassword);
-    router.post('/reset-password', userController.handleResetPassword);
-    router.put('/edit-profile', userController.handleEditProfile);
+router.get('/admin/profile', authMiddleware, authorizeRole('admin'), (req, res) => {
+    res.json({ message: 'Welcome admin', user: req.user });
+});
 
-    // Dòng này cực kỳ quan trọng để kết nối với server.js
-    return app.use('/api', router); 
-}
+router.post('/forgot-password', userController.default.handleForgotPassword);
 
-export default initApiRoutes;
+router.post('/reset-password', userController.default.handleResetPassword);
+router.put('/edit-profile', userController.default.handleEditProfile);
+
+export default router;
