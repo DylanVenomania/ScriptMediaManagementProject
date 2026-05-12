@@ -30,49 +30,106 @@ const sendOTPtoEmail = async (email) => {
 }
 
 const resetPassword = async (data) => {
+
     try {
-        let user = await User.findOne({ 
-            email: data.email, 
-            otpCode: data.otp,
-            otpExpires: { $gt: Date.now() }
+
+        let user = await User.findOne({
+            email: data.email
         });
 
-        if (!user) return { errCode: 2, message: 'OTP sai hoặc hết hạn!' };
+        if (!user) {
 
-        user.password = await bcrypt.hashSync(data.newPassword, salt);
+            return {
+                errCode: 1,
+                message: 'Email không tồn tại!'
+            };
+        }
+
+        user.password =
+            await bcrypt.hashSync(
+                data.newPassword,
+                salt
+            );
         user.otpCode = null;
         user.otpExpires = null;
+
         await user.save();
 
-        return { errCode: 0, message: 'Đổi mật khẩu thành công!' };
+        return {
+            errCode: 0,
+            message: 'Đổi mật khẩu thành công!'
+        };
+
     } catch (e) {
-        return { errCode: -1, message: 'Lỗi server!' };
+
+        return {
+            errCode: -1,
+            message: 'Lỗi server!'
+        };
     }
 }
 
-const handleUpdateProfile = (data) => {
+const handleUpdateProfile = (currentUser, data) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!data.email) return resolve({ errCode: 1, message: 'Thiếu email!' });
-
-            let user = await User.findOne({ email: data.email });
-            if (user) {
-                user.fullName = data.fullName;
-                user.address = data.address;
-                user.avatar = data.avatar; 
-                await user.save();
-                resolve({ errCode: 0, message: 'Cập nhật thành công!' });
-            } else {
-                resolve({ errCode: 2, message: 'Không tìm thấy User!' });
+            let user = await User.findById(currentUser.user._id);
+            if (!user) {
+                return resolve({
+                    errCode: 1,
+                    message: 'Không tìm thấy user!'
+                });
             }
+            user.fullName = data.fullName;
+            if (data.avatar) {
+                user.avatar = data.avatar;
+            }
+
+            await user.save();
+
+            resolve({
+                errCode: 0,
+                message: 'Cập nhật thành công!',
+                user: user
+            });
         } catch (e) {
             reject(e);
         }
     });
 };
 
+const verifyForgotPasswordOTP = async (data) => {
+    try {
+
+        let user = await User.findOne({
+            email: data.email,
+            otpCode: data.otp,
+            otpExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return {
+                errCode: 1,
+                message: 'OTP sai hoặc hết hạn!'
+            };
+        }
+
+        return {
+            errCode: 0,
+            message: 'OTP hợp lệ!'
+        };
+
+    } catch (e) {
+
+        return {
+            errCode: -1,
+            message: 'Lỗi server!'
+        };
+    }
+}
+
 export default {
     sendOTPtoEmail,
+    verifyForgotPasswordOTP,
     resetPassword,
     handleUpdateProfile
 };

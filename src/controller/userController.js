@@ -10,6 +10,11 @@ const handleForgotPassword = async (req, res) => {
     return res.status(200).json(response);
 }
 
+const handleVerifyForgotPasswordOTP = async (req, res) => {
+    let response = await userService.verifyForgotPasswordOTP(req.body);
+    return res.status(200).json(response);
+}
+
 const handleResetPassword = async (req, res) => {
     let response = await userService.resetPassword(req.body);
     return res.status(200).json(response);
@@ -17,7 +22,11 @@ const handleResetPassword = async (req, res) => {
 
 const handleEditProfile = async (req, res) => {
     try {
-        let message = await userService.handleUpdateProfile(req.body);
+        let data = req.body;
+        if (req.file) {
+            data.avatar = `/images/avatar/${req.file.filename}`;
+        }
+        let message = await userService.handleUpdateProfile(req.user, data);
         return res.status(200).json(message);
     } catch (e) {
         return res.status(200).json({ errCode: -1, message: 'Lỗi server...' });
@@ -26,6 +35,7 @@ const handleEditProfile = async (req, res) => {
 
 export default {
     handleForgotPassword,
+    handleVerifyForgotPasswordOTP,
     handleResetPassword,
     handleEditProfile
 };
