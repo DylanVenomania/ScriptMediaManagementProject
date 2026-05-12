@@ -1,99 +1,36 @@
-import express from 'express'
+import express from 'express';
+import userController from '../controller/userController.js';
+import * as authController from '../controller/authController.js';
+import { login } from '../controller/authController.js';
+import { registerLimiter } from '../middlewares/rateLimit.js';
+import { validateRegister } from '../middlewares/validation.js';
+import authMiddleware from '../middlewares/authMiddleware.js';
+import authorizeRole from '../middlewares/roleMiddleware.js';
+import loginLimiter from '../middlewares/rateLimitMiddleware.js';
+import { body } from 'express-validator';
 
-import { registerLimiter } from '../middlewares/rateLimit.js'
+const router = express.Router();
 
-import { validateRegister } from '../middlewares/validation.js'
+const initApiRoutes = (app) => {
+    // Register & Login
+    router.post('/register', registerLimiter, validateRegister, authController.register);
+    router.post('/verify-otp', authController.verifyOTP);
+    router.post('/login', loginLimiter, body('email').isEmail(), body('password').isLength({ min: 6 }), login);
 
-import * as authController from '../controller/authController.js'
+    // Profile bảo mật (cần login)
+    router.get('/user/profile', authMiddleware, authorizeRole('user'), (req, res) => {
+        res.json({ message: 'Welcome user', user: req.user });
+    });
+    router.get('/admin/profile', authMiddleware, authorizeRole('admin'), (req, res) => {
+        res.json({ message: 'Welcome admin', user: req.user });
+    });
 
-import userController from '../controller/userController.js'
+    router.post('/forgot-password', userController.handleForgotPassword);
+    router.post('/reset-password', userController.handleResetPassword);
+    router.put('/edit-profile', userController.handleEditProfile);
 
-const router = express.Router()
+    // Dòng này cực kỳ quan trọng để kết nối với server.js
+    return app.use('/api', router); 
+}
 
-// Register
-router.post(
-    '/register',
-    registerLimiter,
-    validateRegister,
-    authController.register
-)
-
-// Verify OTP
-router.post(
-    '/verify-otp',
-    authController.verifyOTP
-)
-
-// Forgot password
-router.post(
-    '/forgot-password',
-    userController.handleForgotPassword
-)
-
-// Reset password
-router.post(
-    '/reset-password',
-    userController.handleResetPassword
-)
-
-// Edit profile
-router.put(
-    '/edit-profile',
-    userController.handleEditProfile
-)
-import { body } from 'express-validator'
-
-import { login } from '../controller/authController.js'
-
-import authMiddleware from '../middlewares/authMiddleware.js'
-
-import authorizeRole from '../middlewares/roleMiddleware.js'
-
-import loginLimiter from '../middlewares/rateLimitMiddleware.js'
-
-
-router.post(
-    '/login',
-
-    loginLimiter,
-
-    body('email').isEmail(),
-
-    body('password').isLength({ min: 6 }),
-
-    login
-)
-
-router.get(
-    '/user/profile',
-
-    authMiddleware,
-
-    authorizeRole('user'),
-
-    (req, res) => {
-
-        res.json({
-            message: 'Welcome user',
-            user: req.user
-        })
-    }
-)
-
-router.get(
-    '/admin/profile',
-
-    authMiddleware,
-
-    authorizeRole('admin'),
-
-    (req, res) => {
-
-        res.json({
-            message: 'Welcome admin',
-            user: req.user
-        })
-    }
-)
-
-export default router
+export default initApiRoutes;
