@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema({
     collection: 'users'
 });
 
-// Tạo biến model trước
-const User = mongoose.model('User', userSchema);
-
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;
+
