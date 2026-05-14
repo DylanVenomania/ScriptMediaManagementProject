@@ -3,23 +3,39 @@ import User from '../models/user.js';
 import { sendOTP } from '../utils/sendEmail.js';
 
 export const registerUser = async (userData) => {
-    const { email, password } = userData;
+    const { name, email, password } = userData;
 
     // 1. Kiểm tra email tồn tại
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-        throw new Error('Email đã được sử dụng.');
+        if (existingUser.isActivated) {
+            throw new Error('Email đã được sử dụng.');
+        }
+        // Nếu chưa kích hoạt -> Cập nhật thông tin mới và gửi OTP mới
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        existingUser.name = name;
+        existingUser.password = hashedPassword;
+        existingUser.otpCode = otp;
+        existingUser.otpExpires = new Date(Date.now() + 10 * 60000);
+
+        await existingUser.save();
+        await sendOTP(email, otp);
+        return existingUser;
     }
 
-    // 2. Mã hóa mật khẩu (Lớp bảo mật dữ liệu)
+    // Tạo mới nếu chưa có email này trong hệ thống
+        // 2. Mã hóa mật khẩu (Lớp bảo mật dữ liệu)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Tạo mã OTP (6 chữ số ngẫu nhiên)
+        // 3. Tạo mã OTP (6 chữ số ngẫu nhiên)
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 10 * 60000); // 10 phút
 
     // 4. Lưu người dùng tạm thời (isActivated: false)
     const newUser = await User.create({
+        name,
         email,
         password: hashedPassword,
         otpCode: otp,
@@ -59,6 +75,8 @@ export const loginService = async (email, password) => {
     if (!user) {
         throw new Error('User not found');
     }
+    // Chỉ cho login nếu đã kích hoạt
+    if (!user.isActivated) throw new Error('Tài khoản chưa được kích hoạt OTP!');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {

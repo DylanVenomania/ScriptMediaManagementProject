@@ -26,17 +26,10 @@ router.get('/admin/profile', authMiddleware, authorizeRole('admin'), (req, res) 
     res.json({ message: 'Welcome admin', user: req.user });
 });
 
-router.put(
-    '/edit-profile', 
-    authMiddleware, 
-    upload.single('avatar'), 
-    userController.default.handleEditProfile
-);
-
 router.post('/forgot-password', userController.default.handleForgotPassword);
 router.post('/verify-forgot-password-otp',userController.default.handleVerifyForgotPasswordOTP);
 router.post('/reset-password', userController.default.handleResetPassword);
-router.put('/edit-profile',authMiddleware, userController.default.handleEditProfile);
+
 router.put('/edit-profile', authMiddleware, upload.single('avatar'), userController.default.handleEditProfile);
 
 export default router;
